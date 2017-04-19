@@ -64,9 +64,48 @@ public class RunSingleTest {
         assertNotNull("Exception must be thrown during flow execution", exception[0]);
         assertTrue("Exception type should be ExecutionError", exception[0] instanceof ExecutionError);
         assertTrue("Exception cause should be LogicViolationError", exception[0].getCause() instanceof LogicViolationError);
+        assertTrue(ctx.isTerminated());
     }
 
-	@Test
+    @Test
+    public void testNotTerminateOnError() throws LogicViolationError {
+        final Exception[] exception = new Exception[]{null};
+
+        // state machine definition
+        final EasyFlow<StatefulContext> flow =
+
+                from(START).transit(
+                        on(event_1).to(STATE_1).transit(
+                                on(event_2).finish(STATE_2)
+                        )
+                );
+
+        // handlers definition
+        flow.whenEnter(START, new ContextHandler<StatefulContext>() {
+                    @Override
+                    public void call(StatefulContext context) throws Exception {
+                        context.trigger(event_2);
+                    }
+                })
+            .whenError(new ExecutionErrorHandler() {
+                @Override
+                public void call(ExecutionError error, StatefulContext context) {
+                    exception[0] = error;
+                }
+            });
+
+        flow.terminateOnError(false);
+
+        StatefulContext ctx = new StatefulContext();
+        flow.trace().executor(new SyncExecutor()).start(ctx);
+
+        assertNotNull("Exception must be thrown during flow execution", exception[0]);
+        assertTrue("Exception type should be ExecutionError", exception[0] instanceof ExecutionError);
+        assertTrue("Exception cause should be LogicViolationError", exception[0].getCause() instanceof LogicViolationError);
+        assertTrue(!ctx.isTerminated());
+    }
+
+    @Test
 	public void testEventsOrder() throws LogicViolationError {
 		EasyFlow<StatefulContext> flow =
 

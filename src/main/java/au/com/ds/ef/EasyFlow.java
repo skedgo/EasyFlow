@@ -35,6 +35,7 @@ public class EasyFlow<C extends StatefulContext> {
 
     private HandlerCollection handlers = new HandlerCollection();
     private boolean trace = false;
+    private boolean terminateOnError = true;
     private FlowLogger log = new FlowLoggerImpl();
 
     protected EasyFlow(StateEnum startState) {
@@ -145,6 +146,11 @@ public class EasyFlow<C extends StatefulContext> {
 
     public <C1 extends StatefulContext> EasyFlow<C1> trace() {
         trace = true;
+        return (EasyFlow<C1>) this;
+    }
+
+    public <C1 extends StatefulContext> EasyFlow<C1> terminateOnError(boolean terminateOnError) {
+        this.terminateOnError = terminateOnError;
         return (EasyFlow<C1>) this;
     }
 
@@ -263,7 +269,8 @@ public class EasyFlow<C extends StatefulContext> {
 
     protected void doOnError(final ExecutionError error) {
         handlers.callOnError(error);
-        doOnTerminate(error.getState(), (C) error.getContext());
+        if (terminateOnError)
+            doOnTerminate(error.getState(), (C) error.getContext());
     }
 
     protected StateEnum getStartState() {
